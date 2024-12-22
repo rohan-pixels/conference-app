@@ -37,7 +37,7 @@ app.use(session({
     cookie: { secure: false } // Use 'secure: true' if you're using HTTPS
 }));
 
-// Route to Serve index.html
+// Route to Serve index.html (Registration Page)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -108,6 +108,26 @@ app.get('/logout', (req, res) => {
         }
         res.status(200).json({ message: 'Logged out successfully!' });
     });
+});
+
+// Route to Serve Dashboard Page with User Data
+app.get('/dashboard', async (req, res) => {
+    if (req.session.user) {
+        try {
+            const userRef = db.collection('users').doc(req.session.user.uid);
+            const userDoc = await userRef.get();
+            if (userDoc.exists) {
+                // Send the user data to be displayed on the dashboard
+                res.json(userDoc.data());
+            } else {
+                res.status(404).json({ message: 'User not found!' });
+            }
+        } catch (error) {
+            res.status(500).json({ message: 'Error fetching user details.', error: error.message });
+        }
+    } else {
+        res.status(401).json({ message: 'User not logged in!' });
+    }
 });
 
 // Start the Server
