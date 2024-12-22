@@ -3,13 +3,20 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     e.preventDefault(); // Prevent the form from reloading the page
 
     const formData = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
         gender: document.getElementById('gender').value,
-        phone: document.getElementById('phone').value,
-        dob: document.getElementById('dob').value,
-        password: document.getElementById('password').value,
+        phone: document.getElementById('phone').value.trim(),
+        dob: document.getElementById('dob').value.trim(),
+        password: document.getElementById('password').value.trim(),
     };
+
+    // Validate form data
+    if (!formData.name || !formData.email || !formData.password) {
+        document.getElementById('register-message').textContent = 'Please fill all required fields.';
+        document.getElementById('register-message').style.color = 'red';
+        return;
+    }
 
     try {
         const response = await fetch('/add-user', {
@@ -23,13 +30,17 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
         if (response.ok) {
             document.getElementById('register-message').textContent = data.message;
             document.getElementById('register-message').style.color = 'green';
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1000); // Redirect after a delay
         } else {
-            document.getElementById('register-message').textContent = data.message || 'Something went wrong!';
+            document.getElementById('register-message').textContent = data.message || 'Registration failed.';
             document.getElementById('register-message').style.color = 'red';
         }
     } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('register-message').textContent = 'Error connecting to the server.';
+        console.error('Registration error:', error);
+        document.getElementById('register-message').textContent = 'Server error, please try again.';
         document.getElementById('register-message').style.color = 'red';
     }
 });
@@ -39,8 +50,8 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     e.preventDefault(); // Prevent the form from reloading the page
 
     const loginData = {
-        email: document.getElementById('login-email').value,
-        password: document.getElementById('login-password').value
+        email: document.getElementById('login-email').value.trim(),
+        password: document.getElementById('login-password').value.trim(),
     };
 
     try {
@@ -54,31 +65,34 @@ document.getElementById('loginForm').addEventListener('submit', async function (
 
         if (response.ok) {
             sessionStorage.setItem('user', JSON.stringify(data.user));
-
             document.getElementById('login-message').textContent = 'Login successful!';
             document.getElementById('login-message').style.color = 'green';
-            window.location.href = '/dashboard';  // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1000); // Redirect after a delay
         } else {
-            document.getElementById('login-message').textContent = data.message || 'Invalid login credentials!';
+            document.getElementById('login-message').textContent = data.message || 'Login failed.';
             document.getElementById('login-message').style.color = 'red';
         }
     } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('login-message').textContent = 'Error connecting to the server.';
+        console.error('Login error:', error);
+        document.getElementById('login-message').textContent = 'Server error, please try again.';
         document.getElementById('login-message').style.color = 'red';
     }
 });
 
-// Check if user is already logged in (Session Persistence)
-window.addEventListener('load', function() {
+// Redirect if user is already logged in
+window.addEventListener('load', function () {
     const user = sessionStorage.getItem('user');
     if (user) {
-        window.location.href = '/dashboard'; // Redirect if already logged in
+        if (window.location.pathname !== '/dashboard') {
+            window.location.href = '/dashboard';
+        }
     }
 });
 
-// Dashboard - Load user data and display in neat box
-document.addEventListener('DOMContentLoaded', async function() {
+// Dashboard
+document.addEventListener('DOMContentLoaded', async function () {
     const user = sessionStorage.getItem('user');
     if (user) {
         try {
@@ -86,7 +100,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = await response.json();
 
             if (response.ok) {
-                // Display user details in a neat box on the dashboard
                 const userDetails = `
                     <div class="user-details-box">
                         <h2>Welcome, ${data.name}</h2>
@@ -99,29 +112,24 @@ document.addEventListener('DOMContentLoaded', async function() {
                 `;
                 document.getElementById('dashboard').innerHTML = userDetails;
 
-                // Logout button functionality
-                document.getElementById('logoutBtn').addEventListener('click', async function() {
+                document.getElementById('logoutBtn').addEventListener('click', async function () {
                     try {
                         const logoutResponse = await fetch('/logout');
-                        const logoutData = await logoutResponse.json();
-
                         if (logoutResponse.ok) {
-                            sessionStorage.removeItem('user'); // Clear session storage
-                            window.location.href = '/';  // Redirect to registration page
-                        } else {
-                            console.error('Error logging out:', logoutData.message);
+                            sessionStorage.removeItem('user');
+                            window.location.href = '/';
                         }
                     } catch (error) {
-                        console.error('Error:', error);
+                        console.error('Logout error:', error);
                     }
                 });
             } else {
-                console.error('Error fetching user details:', data.message);
+                console.error('Error fetching dashboard data:', data.message);
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Dashboard error:', error);
         }
-    } else {
-        window.location.href = '/'; // Redirect to registration page if not logged in
+    } else if (window.location.pathname === '/dashboard') {
+        window.location.href = '/';
     }
 });
