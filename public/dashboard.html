@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard</h1>
+
+        <div id="user-details" class="user-box">
+            <!-- User details will be populated here -->
+        </div>
+
+        <button id="logoutBtn">Logout</button>
+    </div>
+
+    <script>
+        // Fetch user data from the server and display in the dashboard
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/dashboard');
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Populate the user details in the dashboard
+                    const userDetailsDiv = document.getElementById('user-details');
+                    userDetailsDiv.innerHTML = `
+                        <p><strong>Name:</strong> ${data.name}</p>
+                        <p><strong>Email:</strong> ${data.email}</p>
+                        <p><strong>Gender:</strong> ${data.gender}</p>
+                        <p><strong>Phone:</strong> ${data.phone}</p>
+                        <p><strong>Date of Birth:</strong> ${data.dob}</p>
+                    `;
+                } else {
+                    document.getElementById('user-details').textContent = data.message || 'Error loading user details.';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        // Logout event handler
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await fetch('/logout');
+                window.location.href = '/';  // Redirect to the registration page
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        });
+    </script>
+</body>
+</html>
