@@ -3,7 +3,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const admin = require('firebase-admin');
 const path = require('path');
-const session = require('express-session'); // Import express-session for session management
+const session = require('express-session');
 
 // Load Environment Variables from .env
 dotenv.config();
@@ -30,12 +30,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Set up Session Management
-app.use(session({
-    secret: 'your-secret-key', // A secret key for session encryption
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false } // Use 'secure: true' if you're using HTTPS
-}));
+app.use(
+    session({
+        secret: 'your-secret-key', // A secret key for session encryption
+        resave: false,
+        saveUninitialized: false, // Avoid creating empty sessions
+        cookie: { secure: false, httpOnly: true } // Set secure:true if using HTTPS
+    })
+);
 
 // Route to Serve index.html (Registration Page)
 app.get('/', (req, res) => {
@@ -59,7 +61,7 @@ app.post('/add-user', async (req, res) => {
             email,
             gender,
             phone,
-            dob,
+            dob
         });
 
         res.status(201).json({ message: 'User registered successfully!' });
@@ -75,16 +77,14 @@ app.post('/login', async (req, res) => {
 
     try {
         const userRecord = await admin.auth().getUserByEmail(email);
-        
-        // Password verification (replace this with actual Firebase password check)
-        const isValidPassword = await verifyPassword(userRecord.uid, password);  // Simulated password check
 
+        // Simulated password verification
+        const isValidPassword = await verifyPassword(userRecord.uid, password);
         if (!isValidPassword) {
             return res.status(400).json({ message: 'Invalid login credentials!' });
         }
 
         req.session.user = { uid: userRecord.uid, email: userRecord.email };
-
         res.status(200).json({ message: 'Login successful!', user: req.session.user });
     } catch (error) {
         console.error('Error logging in:', error);
@@ -117,12 +117,12 @@ app.get('/dashboard', async (req, res) => {
             const userRef = db.collection('users').doc(req.session.user.uid);
             const userDoc = await userRef.get();
             if (userDoc.exists) {
-                // Send the user data to be displayed on the dashboard
                 res.json(userDoc.data());
             } else {
                 res.status(404).json({ message: 'User not found!' });
             }
         } catch (error) {
+            console.error('Error fetching user details:', error);
             res.status(500).json({ message: 'Error fetching user details.', error: error.message });
         }
     } else {
@@ -137,10 +137,6 @@ app.listen(PORT, () => {
 
 // Helper function to simulate password verification
 async function verifyPassword(uid, password) {
-    try {
-        return true; // In real case, you would verify the password using Firebase Auth methods
-    } catch (error) {
-        console.error('Password verification error:', error);
-        return false;
-    }
+    // Replace this with actual Firebase Authentication password verification logic
+    return password === 'test'; // For example purposes only
 }
