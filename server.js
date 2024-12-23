@@ -14,7 +14,7 @@ const serviceAccount = require('./conference-data-60d66-firebase-adminsdk-kpwkp-
 // Initialize Firebase Admin SDK
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
+    databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`,
 });
 
 // Get Firestore Database Reference
@@ -35,8 +35,8 @@ app.use(
         secret: 'your-secret-key', // A secret key for session encryption
         resave: false,
         saveUninitialized: false, // Avoid creating empty sessions
-        cookie: { secure: false, httpOnly: true } // Set secure:true if using HTTPS
-    })
+        cookie: { secure: false, httpOnly: true }, // Set secure:true if using HTTPS
+    }),
 );
 
 // Route to Serve index.html (Registration Page)
@@ -49,11 +49,6 @@ app.post('/add-user', async (req, res) => {
     const { name, email, gender, phone, dob, password } = req.body;
 
     try {
-        const userSnapshot = await db.collection('users').where('email', '==', email).get();
-        if (!userSnapshot.empty) {
-            return res.status(400).json({ message: 'Email is already registered!' });
-        }
-
         const userRecord = await admin.auth().createUser({ email, password });
 
         await db.collection('users').doc(userRecord.uid).set({
@@ -61,10 +56,10 @@ app.post('/add-user', async (req, res) => {
             email,
             gender,
             phone,
-            dob
+            dob,
         });
 
-        res.status(201).json({ message: 'User registered successfully!' });
+        res.status(201).json({ message: 'User registered successfully!', user: { name, email, gender, phone, dob } });
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).json({ message: 'Failed to register user.', error: error.message });
@@ -76,15 +71,16 @@ app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const userRecord = await admin.auth().getUserByEmail(email);
+        // Authenticate the user with Firebase Authentication
+        const user = await admin.auth().getUserByEmail(email);
 
-        // Simulated password verification
-        const isValidPassword = await verifyPassword(userRecord.uid, password);
+        // Simulate password verification (replace this with your Firebase Authentication logic)
+        const isValidPassword = password === 'test'; // Replace with secure password verification
         if (!isValidPassword) {
             return res.status(400).json({ message: 'Invalid login credentials!' });
         }
 
-        req.session.user = { uid: userRecord.uid, email: userRecord.email };
+        req.session.user = { uid: user.uid, email: user.email };
         res.status(200).json({ message: 'Login successful!', user: req.session.user });
     } catch (error) {
         console.error('Error logging in:', error);
@@ -134,9 +130,3 @@ app.get('/dashboard', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
-
-// Helper function to simulate password verification
-async function verifyPassword(uid, password) {
-    // Replace this with actual Firebase Authentication password verification logic
-    return password === 'test'; // For example purposes only
-}
