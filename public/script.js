@@ -1,82 +1,81 @@
+// Import Firebase modules
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
+
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAkxYi05Z2-_iFCsL1heSnrVV77Z-9dhDQ",
+    authDomain: "1:332019788420:web:ff31b1e24eaccc1f7130d1.firebaseapp.com",
+    projectId: "conference-data-60d66",
+    storageBucket: "conference-data-60d66.firebasestorage.app",
+    messagingSenderId: "332019788420",
+    appId: "1:332019788420:web:ff31b1e24eaccc1f7130d1",
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
 // Register Event Handler
 document.getElementById('registrationForm').addEventListener('submit', async function (e) {
-    e.preventDefault(); // Prevent the form from reloading the page
+    e.preventDefault();
 
-    const formData = {
-        name: document.getElementById('name').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        gender: document.getElementById('gender').value,
-        phone: document.getElementById('phone').value.trim(),
-        dob: document.getElementById('dob').value.trim(),
-        password: document.getElementById('password').value.trim(),
-    };
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const gender = document.getElementById('gender').value;
+    const phone = document.getElementById('phone').value.trim();
+    const dob = document.getElementById('dob').value.trim();
 
-    // Validate form data
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!name || !email || !password) {
         document.getElementById('register-message').textContent = 'Please fill all required fields.';
         document.getElementById('register-message').style.color = 'red';
         return;
     }
 
     try {
-        const response = await fetch('/add-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData),
-        });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        const data = await response.json();
+        // Optional: Save additional user details in Firebase Realtime Database or Firestore if needed
 
-        if (response.ok) {
-            document.getElementById('register-message').textContent = data.message;
-            document.getElementById('register-message').style.color = 'green';
-            sessionStorage.setItem('user', JSON.stringify(data.user));
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1000); // Redirect after a delay
-        } else {
-            document.getElementById('register-message').textContent = data.message || 'Registration failed.';
-            document.getElementById('register-message').style.color = 'red';
-        }
+        document.getElementById('register-message').textContent = 'Registration successful!';
+        document.getElementById('register-message').style.color = 'green';
+
+        sessionStorage.setItem('user', JSON.stringify({ name, email, gender, phone, dob }));
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 1000);
     } catch (error) {
         console.error('Registration error:', error);
-        document.getElementById('register-message').textContent = 'Server error, please try again.';
+        document.getElementById('register-message').textContent = error.message;
         document.getElementById('register-message').style.color = 'red';
     }
 });
 
 // Login Event Handler
 document.getElementById('loginForm').addEventListener('submit', async function (e) {
-    e.preventDefault(); // Prevent the form from reloading the page
+    e.preventDefault();
 
-    const loginData = {
-        email: document.getElementById('login-email').value.trim(),
-        password: document.getElementById('login-password').value.trim(),
-    };
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
 
     try {
-        const response = await fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(loginData),
-        });
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        const data = await response.json();
+        // Optional: Retrieve additional user details from database if needed
 
-        if (response.ok) {
-            sessionStorage.setItem('user', JSON.stringify(data.user));
-            document.getElementById('login-message').textContent = 'Login successful!';
-            document.getElementById('login-message').style.color = 'green';
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1000); // Redirect after a delay
-        } else {
-            document.getElementById('login-message').textContent = data.message || 'Login failed.';
-            document.getElementById('login-message').style.color = 'red';
-        }
+        sessionStorage.setItem('user', JSON.stringify({ email }));
+        document.getElementById('login-message').textContent = 'Login successful!';
+        document.getElementById('login-message').style.color = 'green';
+
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 1000);
     } catch (error) {
         console.error('Login error:', error);
-        document.getElementById('login-message').textContent = 'Server error, please try again.';
+        document.getElementById('login-message').textContent = error.message;
         document.getElementById('login-message').style.color = 'red';
     }
 });
@@ -92,44 +91,32 @@ window.addEventListener('load', function () {
 });
 
 // Dashboard
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', function () {
     const user = sessionStorage.getItem('user');
-    if (user) {
-        try {
-            const response = await fetch('/dashboard');
-            const data = await response.json();
+    if (user && window.location.pathname === '/dashboard') {
+        const userDetails = JSON.parse(user);
+        const dashboardContent = `
+            <div class="user-details-box">
+                <h2>Welcome, ${userDetails.name || 'User'}</h2>
+                <p>Email: ${userDetails.email}</p>
+                <p>Gender: ${userDetails.gender || 'Not provided'}</p>
+                <p>Phone: ${userDetails.phone || 'Not provided'}</p>
+                <p>Date of Birth: ${userDetails.dob || 'Not provided'}</p>
+            </div>
+            <button id="logoutBtn">Logout</button>
+        `;
+        document.getElementById('dashboard').innerHTML = dashboardContent;
 
-            if (response.ok) {
-                const userDetails = `
-                    <div class="user-details-box">
-                        <h2>Welcome, ${data.name}</h2>
-                        <p>Email: ${data.email}</p>
-                        <p>Gender: ${data.gender}</p>
-                        <p>Phone: ${data.phone}</p>
-                        <p>Date of Birth: ${data.dob}</p>
-                    </div>
-                    <button id="logoutBtn">Logout</button>
-                `;
-                document.getElementById('dashboard').innerHTML = userDetails;
-
-                document.getElementById('logoutBtn').addEventListener('click', async function () {
-                    try {
-                        const logoutResponse = await fetch('/logout');
-                        if (logoutResponse.ok) {
-                            sessionStorage.removeItem('user');
-                            window.location.href = '/';
-                        }
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                    }
-                });
-            } else {
-                console.error('Error fetching dashboard data:', data.message);
+        document.getElementById('logoutBtn').addEventListener('click', async function () {
+            try {
+                await signOut(auth);
+                sessionStorage.removeItem('user');
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout error:', error);
             }
-        } catch (error) {
-            console.error('Dashboard error:', error);
-        }
-    } else if (window.location.pathname === '/dashboard') {
+        });
+    } else if (!user && window.location.pathname === '/dashboard') {
         window.location.href = '/';
     }
 });
