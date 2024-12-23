@@ -1,6 +1,7 @@
 // Import Firebase modules
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
+import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -15,6 +16,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app); // Initialize Firestore
 
 // Register Event Handler
 document.getElementById('registrationForm').addEventListener('submit', async function (e) {
@@ -37,7 +39,15 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Optional: Save additional user details in Firebase Realtime Database or Firestore if needed
+        // Save user details to Firestore
+        await setDoc(doc(db, 'users', user.uid), {
+            name,
+            email,
+            gender,
+            phone,
+            dob,
+            uid: user.uid
+        });
 
         document.getElementById('register-message').textContent = 'Registration successful!';
         document.getElementById('register-message').style.color = 'green';
@@ -63,8 +73,6 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
-        // Optional: Retrieve additional user details from database if needed
 
         sessionStorage.setItem('user', JSON.stringify({ email }));
         document.getElementById('login-message').textContent = 'Login successful!';
